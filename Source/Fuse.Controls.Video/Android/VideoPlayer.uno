@@ -89,7 +89,7 @@ namespace Fuse.Controls.VideoImpl.Android
 			public override void Dispose()
 			{
 				base.Dispose();
-				ScheduleDispose();	
+				ScheduleDispose();
 			}
 		}
 
@@ -415,7 +415,7 @@ namespace Fuse.Controls.VideoImpl.Android
 		public void Play() { Play(_handle); }
 		public void Pause()
 		{
-			if (GetDuration(_handle) >= 0)
+			//if (GetDuration(_handle) >= 0)
 				Pause(_handle);
 		}
 
@@ -428,6 +428,16 @@ namespace Fuse.Controls.VideoImpl.Android
 				android.media.AudioManager am = (android.media.AudioManager)com.fuse.Activity.getRootActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
 				am.requestAudioFocus(null, android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.AUDIOFOCUS_GAIN);
 				player.start();
+
+				// Some devices needs a delay here while the player starts playback of a LIVE HLS stream.
+				try
+				{
+					Thread.sleep(1000);
+				} catch (Exception e)
+				{
+					// TODO
+				}
+
 			}
 		@}
 
