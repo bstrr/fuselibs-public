@@ -28,6 +28,11 @@ namespace Fuse
 		{
 			get { return _rootStage == RootStage.Started || _rootStage == RootStage.Completed; }
 		}
+		
+		internal virtual bool ShouldRootChildren
+		{
+			get { return IsRootingStarted; }
+		}
 
 		/** Whether rooting for this node is completed.
 			Returns false if unrooting has started. */
@@ -66,6 +71,13 @@ namespace Fuse
 		{
 			if (!captured)
 				return;
+				
+			UpdateManager.AddDeferredAction( _laterReleaseRooting, LayoutPriority.EndGroup );
+		}
+		
+		static Action _laterReleaseRooting = LaterReleaseRooting;
+		static void LaterReleaseRooting()
+		{
 			_hasRootCapture = false;
 		}
 		
@@ -168,7 +180,7 @@ namespace Fuse
 		{
 			if (child != null)
 			{
-				if (parent.IsRootingStarted) child.RootInternal(parent);
+				if (parent.ShouldRootChildren) child.RootInternal(parent);
 			}
 		}
 

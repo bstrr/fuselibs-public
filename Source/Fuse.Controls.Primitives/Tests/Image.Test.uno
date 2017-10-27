@@ -10,16 +10,32 @@ namespace Fuse.Controls.Primitives.Test
 	public class ImageTest : TestBase
 	{
 		[Test]
+		public void AllElementProps()
+		{
+			var p = new Image();
+			ElementPropertyTester.All(p);
+		}
+
+		[Test]
+		public void AllElementLayoutTest()
+		{
+			var p = new Image();
+			ElementLayoutTester.All(p);
+		}
+
+		[Test]
 		public void NullSource()
 		{
 			var img = new Image();
-			var root = TestRootPanel.CreateWithChild(img);
-			var src = new HttpImageSource("https://upload.wikimedia.org/wikipedia/commons/3/39/Athene_noctua_(cropped).jpg");
+			using (var root = TestRootPanel.CreateWithChild(img))
+			{
+				var src = new HttpImageSource("https://upload.wikimedia.org/wikipedia/commons/3/39/Athene_noctua_(cropped).jpg");
 
-			img.Source = src;
-			Assert.AreEqual(src, img.Source);
-			img.Source = null;
-			Assert.AreEqual(null, img.Source);
+				img.Source = src;
+				Assert.AreEqual(src, img.Source);
+				img.Source = null;
+				Assert.AreEqual(null, img.Source);
+			}
 		}
 		
 		[Test]

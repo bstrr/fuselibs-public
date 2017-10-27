@@ -2,6 +2,8 @@ using Uno;
 using Uno.Graphics;
 using Uno.UX;
 
+using Fuse.Nodes;
+
 namespace Fuse.Elements
 {
 	/** Specifies how the viewport behaves */
@@ -121,14 +123,14 @@ namespace Fuse.Elements
 			get 
 			{ 
 				if (!HasVisualChildren) return null;
-				return  GetZOrderChild(0);
+				return FirstChild<Visual>();
 			}
 			set 
 			{ 
 				if (RootVisual != value)
 				{
 					while (HasVisualChildren)
-						Children.Remove(GetZOrderChild(0));
+						Children.Remove(FirstChild<Visual>());
 					Children.Add(value);
 					InvalidateLayout();
 				}
@@ -271,6 +273,9 @@ namespace Fuse.Elements
 					Invert: true;
 					Texture: fb.ColorBuffer;
 				};
+
+				if defined(FUSELIBS_DEBUG_DRAW_RECTS)
+					DrawRectVisualizer.Capture(float2(0), ActualSize, WorldTransform, dc);
 
 				FramebufferPool.Release(fb);
 

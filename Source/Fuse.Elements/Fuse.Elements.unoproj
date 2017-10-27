@@ -2,7 +2,7 @@
   "Copyright": "Copyright (c) Fusetools AS 2017",
   "Description": "Multi-platform UI library based on 2D elements",
   "Publisher": "Fusetools AS",
-  "Version": "1.2.1",
+  "Version": "1.3.0",
   "Package": {
     "ProjectUrl": "https://fusetools.com"
   },
@@ -19,7 +19,6 @@
     "Fuse.Controls.Test",
     "Fuse.Drawing.Surface",
     "Fuse.Effects",
-    "Fuse.Elements.Shared",
     "Fuse.Elements.Test",
     "Fuse.Elements.Test.ImageRenderingTests",
     "Fuse.Gestures",

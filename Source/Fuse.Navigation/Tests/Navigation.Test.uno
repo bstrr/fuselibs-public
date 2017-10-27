@@ -5,12 +5,45 @@ using Uno.UX;
 
 using FuseTest;
 
+using Fuse.Controls;
 using Fuse.Elements;
 
 namespace Fuse.Navigation.Test
 {
 	public class NavigationTest : TestBase
 	{
+		//BackButton
+
+		[Test]
+		public void BackButtonAllElementPropertyTests()
+		{
+			var b = new BackButton();
+			ElementPropertyTester.All(b);
+		}
+
+		[Test]
+		public void BackButtonAllLayoutTests()
+		{
+			var b = new BackButton();
+			ElementLayoutTester.All(b);
+		}
+
+		//NavigationBar
+
+		[Test]
+		public void NavigationBarAllElementPropertyTests()
+		{
+			var n = new NavigationBar();
+			ElementPropertyTester.All(n);
+		}
+
+		[Test]
+		public void NavigationBarAllElementLayoutTests()
+		{
+			var n = new NavigationBar();
+			ElementLayoutTester.All(n);
+		}
+
 		[Test]
 		public void JSGetRoute()
 		{
@@ -19,12 +52,13 @@ namespace Fuse.Navigation.Test
 			var p = new UX.JSGetRoute();
 			using (var root = TestRootPanel.CreateWithChild(p, int2(100)))
 			{
-
-				root.StepFrameJS();
-				root.StepFrameJS();
-				root.StepFrameJS();
+				root.MultiStepFrameJS(2);
+				
+				p.CallStepTwo.Perform();
+				root.MultiStepFrameJS(2);
 
 				// If no exceptions we're good.
+				Assert.AreEqual( "yes", p.done.Value );
 			}
 
 			Assert.AreEqual(0, Fuse.Triggers.TransitionGroup.TestMemoryCount );
@@ -37,17 +71,18 @@ namespace Fuse.Navigation.Test
 		public void TryFindPage()
 		{
 			var p = new UX.NavigationLocator();
-			var root = TestRootPanel.CreateWithChild(p, int2(100));
-			
-			TFPCheck(root, p.P1, p.Inner1, p.P1, null);
-			TFPCheck(root, p.E1, p.Inner1, p.P1, null);
-			TFPCheck(root, p.P2, p.Outer, p.P2, null);
-			TFPCheck(root, p.E2, p.Outer, p.P2, null);
-			TFPCheck(root, p.E3, p.Outer, p.P2, p.E3);
-			TFPCheck(root, p.E4, p.Outer, p.P2, p.E3);
-			
-			TFPCheck(root, p.DP1, p.Deep1, p.DP1, null);
-			TFPCheck(root, p.P4, p.Inner2, p.P4, null);
+			using (var root = TestRootPanel.CreateWithChild(p, int2(100)))
+			{
+				TFPCheck(root, p.P1, p.Inner1, p.P1, null);
+				TFPCheck(root, p.E1, p.Inner1, p.P1, null);
+				TFPCheck(root, p.P2, p.Outer, p.P2, null);
+				TFPCheck(root, p.E2, p.Outer, p.P2, null);
+				TFPCheck(root, p.E3, p.Outer, p.P2, p.E3);
+				TFPCheck(root, p.E4, p.Outer, p.P2, p.E3);
+
+				TFPCheck(root, p.DP1, p.Deep1, p.DP1, null);
+				TFPCheck(root, p.P4, p.Inner2, p.P4, null);
+			}
 		}
 		
 		void TFPCheck(TestRootPanel root, Visual page, INavigation navObject, Visual pageObject, Visual pageBindObject,
@@ -87,20 +122,21 @@ namespace Fuse.Navigation.Test
 		public void Stability()
 		{
 			var p = new UX.Stability();
-			var root = TestRootPanel.CreateWithChild(p, int2(100));
-			
-			p.TheNav.PageProgressChanged += OnPageProgressChanged;
-			_changeCount = 0;
-			p.TheNav.Active = p.P2;
-			root.IncrementFrame();
-			Assert.AreEqual(1, _changeCount); //expect update on first frame
-			root.IncrementFrame();
-			Assert.AreEqual(2, _changeCount);
-			//allow to reach end
-			root.StepFrame(1);
-			_changeCount = 0;
-			root.IncrementFrame();
-			Assert.AreEqual(0, _changeCount);
+			using (var root = TestRootPanel.CreateWithChild(p, int2(100)))
+			{
+				p.TheNav.PageProgressChanged += OnPageProgressChanged;
+				_changeCount = 0;
+				p.TheNav.Active = p.P2;
+				root.IncrementFrame();
+				Assert.AreEqual(1, _changeCount); //expect update on first frame
+				root.IncrementFrame();
+				Assert.AreEqual(2, _changeCount);
+				//allow to reach end
+				root.StepFrame(1);
+				_changeCount = 0;
+				root.IncrementFrame();
+				Assert.AreEqual(0, _changeCount);
+			}
 		}
 		
 		int _changeCount;
@@ -113,43 +149,44 @@ namespace Fuse.Navigation.Test
 		public void PageBinding()
 		{
 			var p = new UX.PageBinding();
-			var root = TestRootPanel.CreateWithChild(p,int2(100));
-			
-			Assert.AreEqual("One", p.T1.Value);
-			Assert.AreEqual("Three", p.T2.Value);
-			
-			Assert.AreEqual(3, p.I1.Children.Count);
-			Assert.AreEqual(20, (p.I1.Children[0] as Element).Width.Value);
-			Assert.AreEqual(10, (p.I1.Children[1] as Element).Width.Value);
-			
-			Assert.AreEqual(3, p.I2.Children.Count);
-			Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value);
-			Assert.AreEqual(10, (p.I2.Children[1] as Element).Width.Value);
-			
-			p.Outer.Goto(p.P2, NavigationGotoMode.Bypass);
-			root.IncrementFrame();
-			
-			Assert.AreEqual("Two", p.T1.Value);
-			Assert.AreEqual("Three", p.T2.Value);
-			
-			Assert.AreEqual(10, (p.I1.Children[0] as Element).Width.Value);
-			Assert.AreEqual(20, (p.I1.Children[1] as Element).Width.Value);
-			
-			Assert.AreEqual(10, (p.I2.Children[0] as Element).Width.Value);
-			Assert.AreEqual(20, (p.I2.Children[1] as Element).Width.Value);
-			
-			//allow transition animation
-			p.Outer.Active = p.P1;
-			root.StepFrame(1.1f);
-			
-			Assert.AreEqual("One", p.T1.Value);
-			Assert.AreEqual("Three", p.T2.Value);
-			
-			Assert.AreEqual(20, (p.I1.Children[0] as Element).Width.Value);
-			Assert.AreEqual(10, (p.I1.Children[1] as Element).Width.Value);
-			
-			Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value);
-			Assert.AreEqual(10, (p.I2.Children[1] as Element).Width.Value);
+			using (var root = TestRootPanel.CreateWithChild(p,int2(100)))
+			{
+				Assert.AreEqual("One", p.T1.Value);
+				Assert.AreEqual("Three", p.T2.Value);
+
+				Assert.AreEqual(3, p.I1.Children.Count);
+				Assert.AreEqual(20, (p.I1.Children[0] as Element).Width.Value);
+				Assert.AreEqual(10, (p.I1.Children[1] as Element).Width.Value);
+
+				Assert.AreEqual(3, p.I2.Children.Count);
+				Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value);
+				Assert.AreEqual(10, (p.I2.Children[1] as Element).Width.Value);
+
+				p.Outer.Goto(p.P2, NavigationGotoMode.Bypass);
+				root.IncrementFrame();
+
+				Assert.AreEqual("Two", p.T1.Value);
+				Assert.AreEqual("Three", p.T2.Value);
+
+				Assert.AreEqual(10, (p.I1.Children[0] as Element).Width.Value);
+				Assert.AreEqual(20, (p.I1.Children[1] as Element).Width.Value);
+
+				Assert.AreEqual(10, (p.I2.Children[0] as Element).Width.Value);
+				Assert.AreEqual(20, (p.I2.Children[1] as Element).Width.Value);
+
+				//allow transition animation
+				p.Outer.Active = p.P1;
+				root.StepFrame(1.1f);
+
+				Assert.AreEqual("One", p.T1.Value);
+				Assert.AreEqual("Three", p.T2.Value);
+
+				Assert.AreEqual(20, (p.I1.Children[0] as Element).Width.Value);
+				Assert.AreEqual(10, (p.I1.Children[1] as Element).Width.Value);
+
+				Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value);
+				Assert.AreEqual(10, (p.I2.Children[1] as Element).Width.Value);
+			}
 		}
 		
 		[Test]
@@ -161,7 +198,7 @@ namespace Fuse.Navigation.Test
 			{
 				Assert.AreEqual("one", p.ActiveTitle.Value);
 				Assert.AreEqual(float4(1,0,0,1), p.ActiveTitle.Color);
-				
+
 				var p1 = p.PI.GetZOrderChild(2) as PBFDot;
 				Assert.AreEqual("one", p1.T.Value );
 				Assert.AreEqual(float4(1,0,0,1), p1.T.Color);
@@ -174,13 +211,13 @@ namespace Fuse.Navigation.Test
 				Assert.AreEqual("three", p3.T.Value );
 				Assert.AreEqual(float4(0,0,1,1), p3.T.Color);
 				Assert.AreEqual(0,TriggerProgress(p3.WA));
-				
+
 				p.mainNav.Active = p.P3;
 				root.StepFrame(5); //stabilize animations
-				
+
 				Assert.AreEqual("three", p.ActiveTitle.Value);
 				Assert.AreEqual(float4(0,0,1,1), p.ActiveTitle.Color);
-				
+
 				Assert.AreEqual(0,TriggerProgress(p1.WA));
 				Assert.AreEqual(0,TriggerProgress(p2.WA));
 				Assert.AreEqual(1,TriggerProgress(p3.WA));
@@ -197,51 +234,52 @@ namespace Fuse.Navigation.Test
 		public void HierNavBinding()
 		{
 			var p = new UX.HierNavBinding();
-			var root = TestRootPanel.CreateWithChild(p,int2(100));
-			
-			Assert.AreEqual(1, p.I2.Children.Count);
-			Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value);
-			Assert.AreEqual(10, (p.I2.Children[0] as Element).Height.Value);
-			Assert.AreEqual(10, (p.I2.Children[0] as Element).X.Value);
+			using (var root = TestRootPanel.CreateWithChild(p,int2(100)))
+			{
+				Assert.AreEqual(1, p.I2.Children.Count);
+				Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value);
+				Assert.AreEqual(10, (p.I2.Children[0] as Element).Height.Value);
+				Assert.AreEqual(10, (p.I2.Children[0] as Element).X.Value);
 
-			p.Outer.Goto(p.P2,NavigationGotoMode.Bypass);
-			root.IncrementFrame();
-			
-			Assert.AreEqual(2, p.I2.Children.Count);
-			Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value); //new pages added on top
-			Assert.AreEqual(10, (p.I2.Children[0] as Element).Height.Value);
-			Assert.AreEqual(10, (p.I2.Children[0] as Element).X.Value);
-			
-			Assert.AreEqual(10, (p.I2.Children[1] as Element).Width.Value);
-			Assert.AreEqual(10, (p.I2.Children[1] as Element).Height.Value);
-			Assert.AreEqual(20, (p.I2.Children[1] as Element).X.Value);
-			
-			p.Outer.Goto(p.P3,NavigationGotoMode.Bypass);
-			root.IncrementFrame();
-			
-			Assert.AreEqual(3, p.I2.Children.Count);
-			Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value); //new pages added on top
-			
-			Assert.AreEqual(10, (p.I2.Children[1] as Element).Width.Value);
-			Assert.AreEqual(10, (p.I2.Children[1] as Element).Height.Value);
-			Assert.AreEqual(20, (p.I2.Children[1] as Element).X.Value);
-			
-			Assert.AreEqual(10, (p.I2.Children[2] as Element).Width.Value);
-			
-			//center on page to get enter/exit states
-			p.Outer.Goto(p.P2,NavigationGotoMode.Bypass);
-			Assert.AreEqual(3, p.I2.Children.Count);
-			Assert.AreEqual(10, (p.I2.Children[0] as Element).Width.Value);
-			Assert.AreEqual(20, (p.I2.Children[0] as Element).Height.Value);
-			Assert.AreEqual(10, (p.I2.Children[0] as Element).X.Value);
-			
-			Assert.AreEqual(20, (p.I2.Children[1] as Element).Width.Value);
-			Assert.AreEqual(10, (p.I2.Children[1] as Element).Height.Value);
-			Assert.AreEqual(10, (p.I2.Children[1] as Element).X.Value);
-			
-			Assert.AreEqual(10, (p.I2.Children[2] as Element).Width.Value);
-			Assert.AreEqual(10, (p.I2.Children[2] as Element).Height.Value);
-			Assert.AreEqual(20, (p.I2.Children[2] as Element).X.Value);
+				p.Outer.Goto(p.P2,NavigationGotoMode.Bypass);
+				root.IncrementFrame();
+
+				Assert.AreEqual(2, p.I2.Children.Count);
+				Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value); //new pages added on top
+				Assert.AreEqual(10, (p.I2.Children[0] as Element).Height.Value);
+				Assert.AreEqual(10, (p.I2.Children[0] as Element).X.Value);
+
+				Assert.AreEqual(10, (p.I2.Children[1] as Element).Width.Value);
+				Assert.AreEqual(10, (p.I2.Children[1] as Element).Height.Value);
+				Assert.AreEqual(20, (p.I2.Children[1] as Element).X.Value);
+
+				p.Outer.Goto(p.P3,NavigationGotoMode.Bypass);
+				root.IncrementFrame();
+
+				Assert.AreEqual(3, p.I2.Children.Count);
+				Assert.AreEqual(20, (p.I2.Children[0] as Element).Width.Value); //new pages added on top
+
+				Assert.AreEqual(10, (p.I2.Children[1] as Element).Width.Value);
+				Assert.AreEqual(10, (p.I2.Children[1] as Element).Height.Value);
+				Assert.AreEqual(20, (p.I2.Children[1] as Element).X.Value);
+
+				Assert.AreEqual(10, (p.I2.Children[2] as Element).Width.Value);
+
+				//center on page to get enter/exit states
+				p.Outer.Goto(p.P2,NavigationGotoMode.Bypass);
+				Assert.AreEqual(3, p.I2.Children.Count);
+				Assert.AreEqual(10, (p.I2.Children[0] as Element).Width.Value);
+				Assert.AreEqual(20, (p.I2.Children[0] as Element).Height.Value);
+				Assert.AreEqual(10, (p.I2.Children[0] as Element).X.Value);
+
+				Assert.AreEqual(20, (p.I2.Children[1] as Element).Width.Value);
+				Assert.AreEqual(10, (p.I2.Children[1] as Element).Height.Value);
+				Assert.AreEqual(10, (p.I2.Children[1] as Element).X.Value);
+
+				Assert.AreEqual(10, (p.I2.Children[2] as Element).Width.Value);
+				Assert.AreEqual(10, (p.I2.Children[2] as Element).Height.Value);
+				Assert.AreEqual(20, (p.I2.Children[2] as Element).X.Value);
+			}
 		}
 		
 		[Test]

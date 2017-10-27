@@ -4,11 +4,7 @@ using Uno.Collections;
 
 using Fuse.Elements;
 using Fuse.Controls;
-using Fuse.Controls.Test;
-using Fuse.Controls.Test.Helpers;
 using Fuse.Layouts;
-using FuseTest;
-
 using FuseTest;
 
 class Issue2462Text : Text
@@ -455,12 +451,12 @@ namespace Fuse.Controls.Test
 				root.Layout(int2(1000));
 				Assert.AreEqual(float2(1000,300),g.G.ActualSize);
 				
-				g.G.Children.Remove(g.G.FirstVisualChild);
+				g.G.Children.Remove(g.G.FirstChild<Visual>());
 				root.Layout(int2(1000));
 				Assert.AreEqual(float2(1000,200),g.G.ActualSize);
 				
-				while(g.G.ZOrderChildCount > 0)
-					g.G.Children.Remove(g.G.FirstVisualChild);
+				while (g.G.HasVisualChildren)
+					g.G.Children.Remove(g.G.FirstChild<Visual>());
 				root.Layout(int2(1000));
 				Assert.AreEqual(float2(1000,0),g.G.ActualSize);
 				
@@ -473,8 +469,8 @@ namespace Fuse.Controls.Test
 				Assert.AreEqual(float2(1000,1000),g.P.ActualSize);
 				Assert.AreEqual(float2(1000/3.0f),q.ActualSize);
 				
-				g.P.Children.Remove(g.P.FirstVisualChild);
-				g.P.Children.Remove(g.P.FirstVisualChild);
+				g.P.Children.Remove(g.P.FirstChild<Visual>());
+				g.P.Children.Remove(g.P.FirstChild<Visual>());
 				root.Layout(int2(1000));
 				Assert.AreEqual(float2(1000,1000),g.P.ActualSize);
 				Assert.AreEqual(float2(1000/3.0f,500),q.ActualSize);

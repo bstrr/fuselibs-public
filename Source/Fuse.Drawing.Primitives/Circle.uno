@@ -4,6 +4,7 @@ using Uno.Graphics;
 using Fuse;
 using Fuse.Elements;
 using Fuse.Drawing.Internal;
+using Fuse.Nodes;
 
 namespace Fuse.Drawing.Primitives
 {
@@ -34,14 +35,14 @@ namespace Fuse.Drawing.Primitives
 			var extend = Math.Max(0,r[0]+r[1]) + smoothness;
 			
 			Draw(dc ,visual, radius, stroke.Brush, sc, _oneLimitCoverage,
-				float2(extend), center, smoothness );
+				extend, center, smoothness );
 		}
 		
 		FillCoverage _fillCoverage = new FillCoverage();
 		public void Fill(DrawContext dc, Element visual, float radius, Brush brush, float2 center,
 			float smoothness)
 		{
-			Draw(dc, visual, radius, brush, _fillCoverage, _oneLimitCoverage, float2(smoothness), 
+			Draw(dc, visual, radius, brush, _fillCoverage, _oneLimitCoverage, smoothness,
 				center, smoothness );
 		}
 		
@@ -75,11 +76,15 @@ namespace Fuse.Drawing.Primitives
 		}
 		
 		internal void Draw(DrawContext dc, Element visual, float radius, Brush brush,
-			Coverage cover, LimitCoverage limit, float2 extend, float2 center, float smoothness )
+			Coverage cover, LimitCoverage limit, float extend, float2 center, float smoothness )
 		{
+			if (radius <= 0)
+				return;
+
 			if (_bufferVertex == null)
 				InitBuffers();
-				
+
+			float radiusRcp = 1.0f / radius;
 			draw
 			{
 				apply Common;
@@ -96,7 +101,11 @@ namespace Fuse.Drawing.Primitives
 				
 				float2 VertexPosition: V0 * (radius + extend*2);
 				LocalPosition: VertexPosition + center;
-				float RawDistance: Vector.Length(pixel VertexPosition) - radius;
+				// Mali-400 has FP16 max precision, which cannot square big numbers without overflowing.
+				// So let's make sure the vector we do Length() always has a result in the 0..1 range, to
+				// avoid overflowing.
+				float2 VertexPositionScaled: VertexPosition * radiusRcp;
+				float RawDistance: (Vector.Length(pixel VertexPositionScaled) - 1.0f) * radius;
 				float2 EdgeNormal: Vector.Normalize(pixel V0);
 				
 				apply virtual brush;
@@ -106,6 +115,17 @@ namespace Fuse.Drawing.Primitives
 				apply virtual limit;
 				Coverage: prev * LimitCoverage;
 			};
+
+			// Circles don't actually draw as rectangles, but this is a good-enough-to-be-useful(-and-testable) approximation.
+			if defined(FUSELIBS_DEBUG_DRAW_RECTS)
+			{
+				float2 elementPos = float2(0);
+				float2 elementSize = visual.ActualSize;
+				float minSize = Math.Min(elementSize.X, elementSize.Y);
+				float2 offset = elementPos + elementSize / 2.0f - minSize / 2.0f;
+				float2 size = float2(minSize);
+				DrawRectVisualizer.Capture(offset, size, visual.WorldTransform, dc);
+			}
 		}
 	}
 }

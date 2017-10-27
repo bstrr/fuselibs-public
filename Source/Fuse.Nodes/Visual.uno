@@ -32,8 +32,9 @@ namespace Fuse
 
 		Visuals can have input focus if the `Focus.IsFocusable` property is set to `true`. 
 	*/
-	public abstract partial class Visual : Node, IList<Node>, IPropertyListener, ITemplateSource
+	public abstract partial class Visual : Node, IList<Node>, IPropertyListener, ITemplateSource, IEnumerable<Visual>
 	{
+		public abstract void Draw(DrawContext dc);
 
 		public virtual VisualContext VisualContext 
 		{ 
@@ -87,6 +88,13 @@ namespace Fuse
 		}
 
 		IViewport _viewport;
+		
+		bool _childrenShouldRoot = false;
+		internal override bool ShouldRootChildren		
+		{
+			get { return IsRootingStarted && _childrenShouldRoot; }
+		}
+
 		protected override void OnRooted()
 		{
 			base.OnRooted();
@@ -97,15 +105,19 @@ namespace Fuse
 			WTIRooted();
 
 			OnRootedPreChildren();
+			//children should not be rooted until after the call to OnRootedPreChildren. Certain behaviours, like
+			//bindings, may add children prior to this point. This boolean defers the rooting freeing behaviours
+			//and visuals from worrying about when it's safe to add children.
+			_childrenShouldRoot = true;
 
 			if (HasChildren)
 			{
-				// iterate over a copy of the list to prevent problems when
-				// behaviors add/remove childen during rooting
-				using (var iter = _children.GetEnumeratorVersionedStruct())
+				// Use the IEnumerable<Node> implementation here, as this correctly deals
+				// with the list being manipulated during rooting/unrooting
+				foreach (var c in Children) 
 				{
-					while (iter.MoveNext())
-						iter.Current.RootInternal(this);
+					if (c.IsUnrooted)
+						c.RootInternal(this);
 				}
 			}
 
@@ -119,12 +131,13 @@ namespace Fuse
 			RootResources();
 		}
 
-		internal protected virtual void OnRootedPreChildren() { }
+		protected virtual void OnRootedPreChildren() { }
 		
 		protected override void OnUnrooted()
 		{
 			base.OnUnrooted();
-
+			_childrenShouldRoot = false;
+			
 			UnrootResources();
 			_viewport = null;
 
@@ -137,13 +150,9 @@ namespace Fuse
 
 			if (HasChildren)
 			{
-				// iterate over a copy of the list to prevent problems when
-				// behaviors add/remove childen during rooting
-				using (var iter = _children.GetEnumeratorVersionedStruct())
-				{
-					while (iter.MoveNext())
-						iter.Current.UnrootInternal();
-				}
+				// Use the IEnumerable<Node> implementation here, as this correctly deals
+				// with the list being manipulated during rooting/unrooting
+				foreach (var c in Children) c.UnrootInternal();
 			}
 
 			WTIUnrooted();
@@ -154,25 +163,8 @@ namespace Fuse
 		public override void VisitSubtree(Action<Node> action)
 		{
 			action(this);
-			for (int i = 0; i < Children.Count; i++) 
-				Children[i].VisitSubtree(action);
-		}
-
-		public T FindByType<T>() where T : Visual
-		{
-			if (this is T) return this as T;
-			return GetNearestAncestorOfType<T>();
-		}
-
-		public T GetNearestAncestorOfType<T>() where T : Visual
-		{
-			Visual current = Parent;
-			while(current != null)
-			{
-				if(current is T) return current as T;
-				current = current.Parent;
-			}
-			return null;
+			for (var n = FirstChild<Node>(); n != null; n = n.NextSibling<Node>())
+				n.VisitSubtree(action);
 		}
 
 		/**

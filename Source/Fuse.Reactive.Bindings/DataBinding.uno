@@ -34,6 +34,8 @@ namespace Fuse.Reactive
 
 			<Panel ux:Name="panel1" Width="100" />
 			<DataBinding Target="panel1.Width" Key="panelWidth" />
+
+		> Note: The expression passed to `Key` in explicit mode is by default in the data scope. To reference global names, escape it using `{= }`
 		
 		The above code will use `100` as the default value for `panel1.Width` until the `panelWidth`
 		data is resolved.
@@ -50,9 +52,8 @@ namespace Fuse.Reactive
 		[UXConstructor]
 		public DataBinding(
 			[UXParameter("Target")] Uno.UX.Property target, 
-			[UXParameter("Key"), UXExpression] IExpression key, 
-			[UXAutoNameTable, UXParameter("NameTable")] NameTable nameTable,
-			[UXParameter("Mode"), UXDefaultValue("Default")] BindingMode mode): base(key, nameTable)
+			[UXParameter("Key"), UXDataScope] IExpression key, 
+			[UXParameter("Mode"), UXDefaultValue("Default")] BindingMode mode): base(key)
 		{
 			_mode = mode;
 			Target = target;
@@ -317,14 +318,14 @@ namespace Fuse.Reactive
 	{
 		[UXConstructor]
 		public PropertyBinding([UXParameter("Target")] Uno.UX.Property target, [UXParameter("Source")] Uno.UX.Property source) 
-			: base(target, new Reactive.Property(new Constant(source.Object), source), null, BindingMode.Default) {}
+			: base(target, new Reactive.Property(new Constant(source.Object), source), BindingMode.Default) {}
 	}
 
 	public class ResourceBinding: DataBinding
 	{
 		[UXConstructor]
 		public ResourceBinding([UXParameter("Target")] Uno.UX.Property target, [UXParameter("Key")] string key) 
-			: base(target, new Reactive.Resource(key), null, BindingMode.Default) {}
+			: base(target, new Reactive.Resource(key), BindingMode.Default) {}
 	}
 
 	

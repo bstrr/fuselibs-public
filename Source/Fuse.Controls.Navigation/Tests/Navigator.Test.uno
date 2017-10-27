@@ -331,8 +331,8 @@ namespace Fuse.Navigation.Test
 		}
 		
 		[Test]
-		//https://github.com/fusetools/support-idesse/issues/3
-		public void RootingCache()
+		// https://github.com/fusetools/fuselibs/issues/4256
+		public void RootingCache1()
 		{
 			Router.TestClearMasterRoute();
 			var p =  new UX.Navigator.RootingCache();
@@ -348,7 +348,7 @@ namespace Fuse.Navigation.Test
 				p.Children.Remove(p.N);
 				root.IncrementFrame();
 				p.Children.Add(p.N);
-				root.PumpDeferred();
+				root.MultiStepFrame(2); //timing of removal is not so important for the cache
 				
 				//white box: other pages are removed from the cache, it's actually undefined if they are removed
 				//or simply the state updated
@@ -380,7 +380,7 @@ namespace Fuse.Navigation.Test
 				p.Children.Remove(p.N);
 				root.IncrementFrame();
 				p.Children.Add(p.N);
-				root.PumpDeferred();
+				root.MultiStepFrame(2); //timing of removal is not so important for the cache
 				
 				Assert.AreEqual(1, TriggerProgress(p.one.A));
 				Assert.AreEqual(0, TriggerProgress(p.two.A));
@@ -467,6 +467,7 @@ namespace Fuse.Navigation.Test
 			using (var root = TestRootPanel.CreateWithChild(p,int2(1000)))
 			{
 				Assert.AreEqual( "", p.R.GetCurrentRoute().Format() );
+				
 				p.R.Push( new Route( "a" ) );
 				root.PumpDeferred();
 				Assert.AreEqual( "a/", p.R.GetCurrentRoute().Format() );
@@ -474,19 +475,24 @@ namespace Fuse.Navigation.Test
 				p.R.Push( new Route( "a", null, new Route( "one" ) ) );
 				root.PumpDeferred();
 				Assert.AreEqual( "a/one", p.R.GetCurrentRoute().Format() );
-				Assert.AreEqual(2, p.R.TestHistoryCount);
+				Assert.AreEqual( "a/one", p.R.GetHistoryRoute(0).Format() );
+				Assert.AreEqual( "a/", p.R.GetHistoryRoute(1).Format() );
+				Assert.AreEqual( "", p.R.GetHistoryRoute(2).Format() );
+				Assert.AreEqual( null, p.R.GetHistoryRoute(3) );
 				Assert.AreEqual(p.one, p.Nav.Active);
 				
 				root.PointerSwipe(float2(100,100), float2(100,400));
 				root.StepFrame(5);
 				Assert.AreEqual( "a/", p.R.GetCurrentRoute().Format() );
-				Assert.AreEqual(1, p.R.TestHistoryCount);
+				Assert.AreEqual( "a/", p.R.GetHistoryRoute(0).Format() );
+				Assert.AreEqual( "", p.R.GetHistoryRoute(1).Format() );
+				Assert.AreEqual( null, p.R.GetHistoryRoute(2) );
 				Assert.AreEqual(null, p.Nav.Active);
 				
 				root.PointerSwipe(float2(100,100), float2(100,400));
 				root.StepFrame(5);
 				Assert.AreEqual( "", p.R.GetCurrentRoute().Format() );
-				Assert.AreEqual(0, p.R.TestHistoryCount);
+				Assert.AreEqual( null, p.R.GetHistoryRoute(1) );
 				Assert.AreEqual(null, p.NavO.Active);
 			}
 		}
@@ -640,6 +646,92 @@ namespace Fuse.Navigation.Test
 			}
 		}
 		
+		[Test]
+		public void Pages()
+		{
+			var p = new UX.Navigator.Pages();
+			p.theNav._testInterceptGoto = TestInterceptGoto;
+			ResetInterceptGoto();
+			using (var root = TestRootPanel.CreateWithChild(p))
+			{
+				root.StepFrameJS();
+				Assert.AreEqual( "one", _lastPage.Path );
+				Assert.AreEqual( NavigationGotoMode.Transition, _lastGotoMode );
+				Assert.AreEqual( RoutingOperation.Goto, _lastOperation );
+				Assert.AreEqual( "dog", p.one.v.Value );
+				
+				p.callPushTwo.Perform();
+				root.StepFrameJS();
+				Assert.AreEqual( "two", _lastPage.Path );
+				Assert.AreEqual( RoutingOperation.Push, _lastOperation );
+				Assert.AreEqual( "cat", p.two.v.Value );
+				
+				p.callGoBack.Perform();
+				root.StepFrameJS();
+				Assert.AreEqual( "one", _lastPage.Path );
+				Assert.AreEqual( RoutingOperation.Pop, _lastOperation );
+				Assert.AreEqual( "dog", p.one.v.Value );
+				
+				p.callReplaceThree.Perform();
+				root.StepFrameJS();
+				Assert.AreEqual( "three", _lastPage.Path );
+				Assert.AreEqual( RoutingOperation.Replace, _lastOperation );
+				Assert.AreEqual( "weasel", p.three.v.Value );
+				
+				p.callGoBack.Perform();
+				root.StepFrameJS();
+				Assert.AreEqual( null, _lastPage.Path );
+				Assert.AreEqual( RoutingOperation.Pop, _lastOperation );
+			}
+		}
+		
+		[Test]
+		public void PagesInert()
+		{
+			var p = new UX.Navigator.PagesInert();
+			p.theNav._testInterceptGoto = TestInterceptGoto;
+			ResetInterceptGoto();
+			using (var root = TestRootPanel.CreateWithChild(p))
+			{
+				root.StepFrameJS();
+				Assert.AreEqual( "two", _lastPage.Path );
+				Assert.AreEqual( NavigationGotoMode.Transition, _lastGotoMode );
+				Assert.AreEqual( RoutingOperation.Goto, _lastOperation );
+				
+				ResetInterceptGoto();
+				p.callReplace.Perform();
+				root.StepFrameJS();
+				//We ideally want NoChange here, but a limitation in the binding engine prevents it:
+				//replacing the items in an observable with the same ones results in new Uno side objects
+				//there's no way to tell something hasn't changed
+				Assert.AreEqual( RoutingResult.MinorChange, _lastResult );
+				//Assert.AreEqual( RoutingResult.NoChange, _lastResult );
+				
+				//thus not much point in testing more now since you can't have inert changes :(
+			}
+		}
+		
+		RouterPage _lastPage;
+		string _lastOperationStyle;
+		NavigationGotoMode _lastGotoMode;
+		RoutingOperation _lastOperation;
+		RoutingResult _lastResult;
+		void TestInterceptGoto(RouterPage page, NavigationGotoMode gotoMode,
+			RoutingOperation operation, string operationStyle, RoutingResult result)
+		{
+			_lastPage = page;
+			_lastGotoMode = gotoMode;
+			_lastOperation = operation;
+			_lastOperationStyle = operationStyle;
+			_lastResult = result;
+		}
+		
+		void ResetInterceptGoto()
+		{
+			_lastPage = null;
+			_lastOperationStyle = null;
+		}
+			
 		List<T> GetChildren<T>(Visual n) where T : Node
 		{
 			var l = new List<T>();

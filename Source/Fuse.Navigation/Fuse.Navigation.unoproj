@@ -3,7 +3,7 @@
   "Description": "Library of common trigger behaviors for UIs",
   "Publisher": "Fusetools AS",
   "Title": "Fuse.Triggers",
-  "Version": "1.2.1",
+  "Version": "1.3.0",
   "Package": {
     "ProjectUrl": "https://fusetools.com"
   },
@@ -22,6 +22,8 @@
     "../Fuse.Animations/Fuse.Animations.unoproj",
     "../Fuse.Marshal/Fuse.Marshal.unoproj",
     "../Fuse.Reactive.Expressions/Fuse.Reactive.Expressions.unoproj",
+    "../Fuse.Reactive.Bindings/Fuse.Reactive.Bindings.unoproj",
+    "../Fuse.Reactive/Fuse.Reactive.unoproj",
     "../Fuse.Common/Fuse.Common.unoproj",
     "../Fuse.Scripting/Fuse.Scripting.unoproj",
     "../Fuse.Nodes/Fuse.Nodes.unoproj",

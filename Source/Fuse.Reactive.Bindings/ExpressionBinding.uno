@@ -7,15 +7,9 @@ namespace Fuse.Reactive
 	{
 		public IExpression Key { get; private set; }
 
-		[WeakReference]
-		NameTable _nameTable;
-		public NameTable NameTable { get { return _nameTable; } }
-
-
-		protected ExpressionBinding(IExpression key, NameTable nameTable)
+		protected ExpressionBinding(IExpression key)
 		{
 			Key = key;
-			_nameTable = nameTable;
 		}
 
 		IDisposable _expressionSub;
@@ -43,8 +37,11 @@ namespace Fuse.Reactive
 
 		protected override void OnUnrooted()
 		{
-			_expressionSub.Dispose();
-			_expressionSub = null;
+			if (_expressionSub != null)
+			{
+				_expressionSub.Dispose();
+				_expressionSub = null;
+			}
 			base.OnUnrooted();
 		}
 

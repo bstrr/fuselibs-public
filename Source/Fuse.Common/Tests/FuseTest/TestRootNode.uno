@@ -5,18 +5,26 @@ using Fuse;
 using Fuse.Controls;
 using Fuse.Input;
 using Fuse.Internal;
+using Fuse.Nodes;
 
 namespace FuseTest
 {
 	 /* TODO: Missing bootstrapper */
 	public class TestRootViewport : RootViewport, IRenderViewport
 	{
+		extern(!Android && !iOS)
 		public TestRootViewport(Uno.Platform.Window window, float pixelsPerPoint = 0)
 			: base(window, pixelsPerPoint)
 		{ 
 			OverrideSize( float2(100), pixelsPerPoint, pixelsPerPoint );
 		}
-		
+
+		extern(Android || iOS)
+		public TestRootViewport(Uno.Platform.Window window, float pixelsPerPoint = 0)
+		{
+			OverrideSize( float2(100), pixelsPerPoint, pixelsPerPoint );
+		}
+
 		public void Resize(float2 size)
 		{
 			OverrideSize(size, PixelsPerPoint, PixelsPerOSPoint);
@@ -210,11 +218,17 @@ namespace FuseTest
 			//need to make `draw` statements work.
 			var fb = FramebufferPool.Lock( (int2)_rootViewport.PixelSize, Uno.Graphics.Format.RGBA8888, true);
 			_dc.PushRenderTarget(fb);
+
+			if defined(FUSELIBS_DEBUG_DRAW_RECTS)
+				DrawRectVisualizer.StartFrame(_dc.RenderTarget);
 			
 			_rootViewport.Draw(_dc);
 			
 			_dc.PopRenderTarget();
 			FramebufferPool.Release(fb);
+
+			if defined(FUSELIBS_DEBUG_DRAW_RECTS)
+				DrawRectVisualizer.EndFrameAndVisualize(_dc);
 			
 			DrawManager.EndDraw(_dc);
 		}
@@ -226,12 +240,24 @@ namespace FuseTest
 		{
 			if (_dc == null)
 				_dc = new DrawContext(_rootViewport);
+
+			DrawManager.PrepareDraw(_dc);
 			
 			var ret = new TestFramebuffer((int2)_rootViewport.PixelSize);
 			_dc.PushRenderTarget(ret.Framebuffer);
 			_dc.Clear(float4(0),1);
+
+			if defined(FUSELIBS_DEBUG_DRAW_RECTS)
+				DrawRectVisualizer.StartFrame(_dc.RenderTarget);
+
 			_rootViewport.Draw(_dc);
+
+			if defined(FUSELIBS_DEBUG_DRAW_RECTS)
+				DrawRectVisualizer.EndFrameAndVisualize(_dc);
+
 			_dc.PopRenderTarget();
+
+			DrawManager.EndDraw(_dc);
 
 			return ret;
 		}
@@ -261,15 +287,33 @@ namespace FuseTest
 			that simulates that the JS doesn't take long to execute. Here we intentionally don't
 			force the Dispatcher to lock/process since it will naturally miss a frame -- we'd like
 			the tests to sometimes miss frames as well.
+			
+			If an `elapsedTime` is specified it will wait this additional amount of time (simulate
+			the steps). If the synchronization exceeds the total time it will throw an exception.
+			This is currently only useful if elapsedTime is sufficiently large to accomodate several
+			_frameIncrement steps.
 		*/
-		public void StepFrameJS()
+		public void StepFrameJS(float elapsedTime = 0)
 		{
+			var w = Fuse.Reactive.JavaScript.Worker;
+			if (w == null)
+				throw new Exception("Calling stepFrameJS though there is no JavaScript worker" );
+				
 			var fence = Fuse.Reactive.JavaScript.Worker.PostFence();
 			var loop = true;
+			var e = 0f;
 			while(loop)
 			{
 				loop = !fence.IsSignaled;
 				IncrementFrameImpl(_frameIncrement, StepFlags.WaitJS | StepFlags.IncrementFrame);
+				e += _frameIncrement;
+			}
+			
+			if (elapsedTime > 0)
+			{
+				if (e >= elapsedTime)
+					throw new Exception( "Unable to satisfy time constraint in stepping" );
+				StepFrame(elapsedTime - e);
 			}
 		}
 		
@@ -287,6 +331,12 @@ namespace FuseTest
 		{
 			for (int i=0; i < count; ++i)
 				StepFrameJS();
+		}
+		
+		public void MultiStepFrame(int count)
+		{
+			for (int i=0; i < count; ++i)
+				StepFrame();
 		}
 		
 		/**
@@ -416,11 +466,5 @@ namespace FuseTest
 		{
 			AppBase.TestSetRootViewport( null );
 		}
-	}
-	
-	[Flags]
-	public enum EventFlags
-	{
-		None = 0,
 	}
 }

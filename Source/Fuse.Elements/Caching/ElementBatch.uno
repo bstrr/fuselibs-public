@@ -69,7 +69,7 @@ namespace Fuse.Elements
 		public bool IsValid;
 	}
 
-	internal class ElementBatch : IElementBatchDrawable
+	internal class ElementBatch : IElementBatchDrawable, IEnumerable<Visual>
 	{
 		public readonly ElementBatcher _elementBatcher;
 		public readonly ElementAtlas _elementAtlas;
@@ -127,24 +127,28 @@ namespace Fuse.Elements
 			                 origin.Y + size.Y + 1);
 		}
 
-		public static Recti GetCachingRect(Element elm)
+		public static bool TryGetCachingRect(Element elm, out Recti cachingRect)
 		{
 			var bounds = elm.RenderBoundsWithEffects;
 			if (bounds.IsInfinite || bounds.IsEmpty)
-				throw new Exception( "element has no caching rect" );
+			{
+				cachingRect = new Recti(0, 0, 0, 0);
+				return false;
+			}
 
-			const int CachingRectPadding = 1;
-			
-			return Recti.Inflate(ConservativelySnapToCoveringIntegers(Rect.Scale(bounds.FlatRect,
-				elm.AbsoluteZoom)), CachingRectPadding);
+			const int cachingRectPadding = 1;
+			cachingRect = Recti.Inflate(ConservativelySnapToCoveringIntegers(Rect.Scale(bounds.FlatRect,
+				elm.AbsoluteZoom)), cachingRectPadding);
+			return true;
 		}
 
-		VisualBounds CalcRenderBounds()
+		public static Recti GetCachingRect(Element elm)
 		{
-			var rect = VisualBounds.Empty;
-			for (int i = 0; i < _elements.Count; i++)
-				rect = rect.Merge(_elements[i]._elm.CalcRenderBoundsInParentSpace());
-			return rect;
+			Recti cachingRect;
+			if (!TryGetCachingRect(elm, out cachingRect))
+				throw new Exception( "element has no caching rect" );
+
+			return cachingRect;
 		}
 
 		VisualBounds _renderBounds;
@@ -154,11 +158,14 @@ namespace Fuse.Elements
 			{
 				if (_renderBounds == null)
 				{
-					_renderBounds = CalcRenderBounds();
+					_renderBounds = VisualBounds.Merge(this, VisualBounds.Type.Render);
 				}
 				return _renderBounds;
 			}
 		}
+
+		public IEnumerator<Visual> GetEnumerator() { return _elements.Select(PickVisual).GetEnumerator(); }
+		static Visual PickVisual(ElementBatchEntry e) { return e._elm; }
 
 		List<ElementBatchEntry> _elements = new List<ElementBatchEntry>();
 		public void AddElement(Element elm)
@@ -172,7 +179,10 @@ namespace Fuse.Elements
 			_indexBufferValid = false;
 			_vertexPositionBufferValid = false;
 			_vertexTexCoordBufferValid = false;
-			_renderBounds = null;
+			if (_renderBounds != null)
+				_renderBounds = _renderBounds.Merge(elm.CalcRenderBoundsInParentSpace());
+			else
+				_renderBounds = elm.CalcRenderBoundsInParentSpace();
 		}
 
 		public void RemoveElement(Element elm)

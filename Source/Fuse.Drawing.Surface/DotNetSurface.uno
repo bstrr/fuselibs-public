@@ -156,10 +156,9 @@ namespace Fuse.Drawing
 			var actualPath = (DotNetCanvasPath)path;
 
 			var graphicsPath = actualPath.Path.GetGraphicsPath();
+			if (DotNetHelpers.IsEmptyPath(graphicsPath))
+				return;
 
-			// if the path has no size, return
-			if (DotNetHelpers.IsEmptyPath(graphicsPath)) return;
-			
 			bool eoFill = actualPath.FillRule == FillRule.EvenOdd;
 			// set the path filling mode
 			DotNetHelpers.SetEOFill(graphicsPath, eoFill);
@@ -230,9 +229,8 @@ namespace Fuse.Drawing
 			var actualPath = (DotNetCanvasPath)path;
 
 			var graphicsPath = actualPath.Path.GetGraphicsPath();
-
-			// if the path has no size, return
-			if (DotNetHelpers.IsEmptyPath(graphicsPath)) return;
+			if (DotNetHelpers.IsEmptyPath(graphicsPath))
+				return;
 
 			bool eoFill = actualPath.FillRule == FillRule.EvenOdd;
 			// set the path filling mode
@@ -495,6 +493,7 @@ namespace Fuse.Drawing
 			int size = width * height * 4;
 			var pixelData = new byte[size];
 
+			GL.PixelStore(GLPixelStoreParameter.PackAlignment, 1);
 			GL.ReadPixels(0,0, width, height, GLPixelFormat.Rgba, GLPixelType.UnsignedByte, pixelData);
 
 			// flip r and b
@@ -565,6 +564,7 @@ namespace Fuse.Drawing
 		public static extern void Render (float2 size, Buffer buffer, OpenGL.GLTextureHandle GLBuffer)
 		{
 			GL.BindTexture(GLTextureTarget.Texture2D, GLBuffer);
+			GL.PixelStore(GLPixelStoreParameter.UnpackAlignment, 1);
 			GL.TexImage2D(
 				GLTextureTarget.Texture2D, 0, 
 				GLPixelFormat.Rgba, (int)size.X, (int)size.Y, 0, 
@@ -576,8 +576,8 @@ namespace Fuse.Drawing
 
 		public static extern bool IsEmptyPath(GraphicsPath path)
 		{
-			return path.GetBounds().Width == 0 || path.GetBounds().Height == 0;
-		} 
+			return path.GetBounds().Width == 0 && path.GetBounds().Height == 0;
+		}
 
 		public static extern void SetEOFill(GraphicsPath path, bool eoFill)
 		{
@@ -739,6 +739,8 @@ namespace Fuse.Drawing
 		{
 			var bounds = path.GetBounds();
 			bounds.Inflate(width, width);
+			if (bounds.IsEmpty)
+				return;
 
 			SolidBrush brush = new SolidBrush(color);
 			Pen pen = new Pen(brush, width);
@@ -764,6 +766,8 @@ namespace Fuse.Drawing
 		{
 			var bounds = path.GetBounds();
 			bounds.Inflate(width, width);
+			if (bounds.IsEmpty)
+				return;
 
 			var brush = new TextureBrush(image, DotNetWrapMode.Tile);
 			
@@ -796,12 +800,12 @@ namespace Fuse.Drawing
 			LineJoin lineJoin, LineCap lineCap
 		)
 		{
-			var state = graphics.Save();
 			var bounds = path.GetBounds();
-
-			// make the clipping path wider to componesate for the stroke width
 			bounds.Inflate(width, width);
+			if (bounds.IsEmpty)
+				return;
 
+			var state = graphics.Save();
 			ColorBlend blend = CreateColorBlend(lg, bounds, startX, startY, endX, endY);
 
 			var brush = new LinearGradientBrush(
@@ -846,6 +850,9 @@ namespace Fuse.Drawing
 		)
 		{
 			var bounds = path.GetBounds();
+			if (bounds.IsEmpty)
+				return;
+
 			var blend = CreateColorBlend(lg, bounds, startX, startY, endX, endY);
 
 			var startPoint = new PointF(bounds.X, bounds.Y);
@@ -891,13 +898,15 @@ namespace Fuse.Drawing
 			float width, float height
 			)
 		{
+			var bounds = path.GetBounds();
+			if (bounds.IsEmpty)
+				return;
+
 			var newImage = new Bitmap(image, (int)tileSizeX, (int)tileSizeY);
 
 			var brush = new TextureBrush(newImage, DotNetWrapMode.Tile);
 			brush.ScaleTransform(1, -1);
 			brush.TranslateTransform(originX, originY);
-			
-			var bounds = path.GetBounds();
 
 			graphics.SetClip(bounds, CombineMode.Replace);
 			graphics.FillPath(brush, path);
@@ -1269,6 +1278,7 @@ namespace Fuse.Drawing
 			public extern float X { get; set; }
 			public extern float Y { get; set; }
 			public extern void Inflate(float x,float y);
+			public extern bool IsEmpty { get; }
 		}
 
 		[DotNetType("System.Drawing.Rectangle")]
