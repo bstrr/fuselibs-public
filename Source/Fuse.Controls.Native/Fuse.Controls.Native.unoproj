@@ -2,7 +2,7 @@
   "Copyright": "Copyright (c) Fusetools AS 2017",
   "Description": "Abstraction over platform-specific native controls",
   "Publisher": "Fusetools AS",
-  "Version": "1.3.0",
+  "Version": "1.4.0-rc5",
   "Package": {
     "ProjectUrl": "https://fusetools.com"
   },
@@ -12,8 +12,10 @@
     "Fuse.Views",
     "Fuse.iOS",
     "Fuse.iOS.TextRenderer",
+    "Fuse.Controls.DatePicker",
     "Fuse.Controls.Panels",
     "Fuse.Controls.Primitives",
+    "Fuse.Controls.TimePicker",
   ],
   "Packages": [
     "Uno.Collections",

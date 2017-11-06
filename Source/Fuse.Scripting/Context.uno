@@ -9,8 +9,8 @@ namespace Fuse.Scripting
 {
 	public interface IThreadWorker
 	{
-		Function Observable { get; }
 		IDispatcher Dispatcher { get; }
+		void Invoke(Uno.Action<Scripting.Context> action);
 		object Unwrap(object obj);
 		object Wrap(object obj);
 	}
@@ -73,14 +73,9 @@ namespace Fuse.Scripting
 
 		public IDispatcher Dispatcher { get { return _worker.Dispatcher; } }
 
-		public void Invoke(Action action)
+		public void Invoke(Uno.Action<Scripting.Context> action)
 		{
-			_worker.Dispatcher.Invoke(action);
-		}
-
-		public Function Observable
-		{
-			get { return _worker.Observable; }
+			_worker.Invoke(action);
 		}
 
 		Function _identity;

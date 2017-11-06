@@ -38,10 +38,11 @@ namespace Fuse.Reactive
 		}
 			
 		
+		IObservableArray _observable;
 		IArray _source;
-		IObservable _observable;
 		IObserver _slave;
 		ISubscription _subscription;
+		IDisposable _disposable;
 		
 		/**
 			@param obs The observable to attach to
@@ -54,14 +55,19 @@ namespace Fuse.Reactive
 		{
 			Detach();
 			_source = src;
-			_observable = src as IObservable;
+			_observable = src as IObservableArray;
 
 			//TODO (feature-Models branch). This class doesn't want feedback from `Subscribe` so it
 			//checks _subscription == null on all callback fucntions. The feature-Models branch has this
 			//fixed and those checks could be removed.
 			if (_observable != null)
-				_subscription = _observable.Subscribe(this);
-				
+			{
+				_disposable = _observable.Subscribe(this);
+				_subscription = _disposable as ISubscription;
+				if (_subscription == null)
+					Fuse.Diagnostics.InternalError( "An observable with write-back is expected", this );
+			}
+			
 			//treat the bound observable as the source-of-truth
 			((IObserver)this).OnNewAll(src);
 			
@@ -71,11 +77,12 @@ namespace Fuse.Reactive
 		
 		public void Detach()
 		{
-			if (_subscription != null)
+			if (_disposable != null)
 			{
-				_subscription.Dispose();
-				_subscription = null;
+				_disposable.Dispose();
+				_disposable = null;
 			}
+			_subscription = null;
 			_observable = null;
 			_source = null;
 			_slave = null;

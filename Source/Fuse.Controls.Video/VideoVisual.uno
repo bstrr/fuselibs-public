@@ -54,6 +54,17 @@ namespace Fuse.Controls.VideoImpl
 		IVideoCallbacks,
 		IMediaPlayback
 	{
+
+		enum PlaybackTarget
+		{
+			Undefined,
+			Playing,
+			Paused,
+			Stopped
+		}
+
+		PlaybackTarget _playbackTarget = PlaybackTarget.Undefined;
+
 		protected override void Attach()
 		{
 			Control.RenderParamChanged += OnRenderParamChanged;
@@ -116,6 +127,26 @@ namespace Fuse.Controls.VideoImpl
 		{
 			ResetTriggers();
 			BusyTask.SetBusy(Control, ref _busyTask, BusyTaskActivity.None);
+
+			Control.OnDurationChanged();
+
+			var playback = (IPlayback)this;
+			switch (_playbackTarget)
+			{
+				case PlaybackTarget.Playing:
+					playback.Resume();
+					break;
+
+				case PlaybackTarget.Paused:
+					playback.Pause();
+					break;
+
+				case PlaybackTarget.Stopped:
+					playback.Stop();
+					break;
+			}
+
+			_playbackTarget = PlaybackTarget.Undefined;
 		}
 
 		void IVideoCallbacks.OnCompleted()
@@ -144,6 +175,7 @@ namespace Fuse.Controls.VideoImpl
 
 		void IPlayback.Stop()
 		{
+			_playbackTarget = PlaybackTarget.Stopped;
 			((IPlayback)this).Pause();
 			((IMediaPlayback)this).Position = 0.0;
 		}
@@ -159,6 +191,7 @@ namespace Fuse.Controls.VideoImpl
 
 		void IPlayback.Pause()
 		{
+			_playbackTarget = PlaybackTarget.Paused;
 			if (_videoService.IsValid)
 			{
 				_videoService.Pause();
@@ -169,6 +202,7 @@ namespace Fuse.Controls.VideoImpl
 
 		void IPlayback.Resume()
 		{
+			_playbackTarget = PlaybackTarget.Playing;
 			if (_videoService.IsValid)
 			{
 				ResetTriggers();

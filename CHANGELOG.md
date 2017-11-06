@@ -1,6 +1,86 @@
 # Unreleased
 
+
+# 1.4
+
+## 1.4.0
+
+### Notifications
+- Fix regression causing iOS apps not to be accepted to the Store apparently due to use of push-notifications even though they are not used in the project.
+
+### TextInput
+- Fixed issue on android where placeholder text on a `<TextInput IsPassword="true" />` would be drawn as password dots
+
+### Scripting.Context
+- Invoke now takes an `Action<Scripting.Context>`. This is the first step in refactoring our scripting layer to make sure code does not evaluate JS on the wrong thread
+- The `Observable` property has been removed from Context & IThreadWorker
+
+### Fuse.Reactive.JavaScript
+- Fuse.Reactive.JavaScript has been renamed to Fuse.Scripting.JavaScript & the separate VM packages are now subdirectories of this package
+
+### DesktopApp Updates
+- Fixed an issue about certain event not triggering a proper update and redraw on desktop preview/build
+
+### RangeControl
+- `LinearRangeBehavior` now correctly responds to `UserStep` values, providing quantized input
+- Fixed `RangeControl.RelativeValue` to properly update when bound in UX
+- Allowed `Minimum` to be less than `Maximum` on `RangeControl` making it easier to do left-to-right `100..0` ranges.
+- Fixed a defect in position calculations in `LinearRangeBehavior`. It now uses the immediate Element parent for bounds calculation as opposed to the `RangeControl`.
+- Added `UserStep` support to Android and iOS native Slider
+
+### WebView
+- Exported the methods goBack, goForward, reload and stop for use in FuseJS
+- Fixed regression in 1.3 that broke WebView when using URISchemeHandler
+
+### ScrollViewPager
+- Fixed a NullReferenceError that could happen while using ScrollViewPager in preview
+
+### DatePicker
+- Introduced Fuse.Controls.DatePicker class, which wraps native date pickers on Android and iOS. See the `DatePicker` class documentation for more details.
+
+### TimePicker
+- Introduced Fuse.Controls.TimePicker class, which wraps native time pickers on Android and iOS. See the `TimePicker` class documentation for more details.
+
+### TextView
+- Fixed bug on Android where setting `TextWrapping="NoWrap"` would force the `TextView` to be single line. New behavior is to instead allow the view to scroll horizontally instead of automatically wrapping the text.
+
+### MultiDensityImageSource
+- Added native support, meaning it can be used by images inside a `NativeViewHost`.
+
+### Video
+- Fixed bug in Video where playback actions, like `Play`, used before the video was initialized would end up getting swallowed.
+- Added some JavaScript methods to `Video` to make it easier to control playback from JavaScript, as well as obtaining information the video duration.
+- Made `Video.Duration` and `Video.Position` property-bindable.
+
+### Fuse.Marshal:
+- Fixed a bug where UX expressions that produce two component floats did not expand to four compoent floats the same same way as literals did.
+
+### Fuse.Reactive framework changes (Uno-level)
+- These are breaking changes, but very unlikely to affect your app:
+ * The `DataBinding`, `EventBinding` and `ExpressionBinding` class constructors no longer take a `NameTable` argument.
+ * The `Name` and `This` expression classes has been removed. The UX compiler will now compile these as `Constant` expressions that contain the actual objects instead.
+ * The `IContext` interface no longer contains the `NameTable` property.
+ * The `Fuse.IRaw` interface removed (now internal to the `Fuse.Reactive.JavaScript` package). Had no practical public use.
+ * The `Fuse.Reactive.ListMirror` class is no longer public. This was never intended to be public and has no practical public application.
+ * Added detailed docs for many of the interfaces in the `Fuse.Reactive` namespace.
+ * The `Fuse.Reactive.IWriteable` interface has changed (breaking!). The method signature is now `bool TrySetExclusive(object)` instead of `void SetExclusive(object)`. Unlikely to affect your code.
+ * `IObservable` and `IObservableArray` no longer push their initial value on `Subscribe`.
+
+### Image
+- Image will now respect Exif orientation.
+
+
 # 1.3
+
+## 1.3.2
+
+### Callback
+- Fixed a regression where args.sender was no longer the `ux:Name` of the parent of the trigger.
+
+## 1.3.1
+
+### Navigation
+- Fixed an issue where `PageControl.ActiveIndex` would not update if navigation done with JavaScript `seekToPath` or `Router` interfaces.
 
 ## 1.3.0
 
@@ -122,12 +202,6 @@ which will stop push notifications registering (and potentially asking for permi
 ### UpdateManager changes (Uno-level)
 - Breaking change: Several entrypoints on UpdateManager now take a `LayoutPriority` enum instead of `int` as the `priority` argument. Very unlikely to affect user code code.
 - Fixed an issue where writes to `FuseJS/Observables` would not dispatch in the right order on the UI thread if interleaved with `ScriptClass` callbacks (slightly breaking behavior).
-
-### Fuse.Reactive framework changes (Uno-level)
-- These are breaking changes, but very unlikely to affect your app:
- * The `DataBinding`, `EventBinding` and `ExpressionBinding` class constructors no longer take a `NameTable` argument.
- * The `Name` and `This` expression classes has been removed. The UX compiler will now compile these as `Constant` expressions that contain the actual objects instead.
- * The `IContext` interface no longer contains the `NameTable` property.
 
 
 # 1.2

@@ -2,7 +2,7 @@
   "Copyright": "Copyright (c) Fusetools AS 2017",
   "Description": "Support for Push Notifications On Mobile",
   "Publisher": "Fusetools AS",
-  "Version": "1.3.0",
+  "Version": "1.4.0-rc5",
   "Package": {
     "ProjectUrl": "https://fusetools.com"
   },
@@ -24,12 +24,15 @@
     "JS.uno:Source",
 
     "iOS/Impl.uno:Source",
+    "iOS/Impl.uxl:Extensions",
     "iOS/AppDelegatePushNotify.h:CHeader:iOS",
     "iOS/AppDelegatePushNotify.mm:CSource:iOS",
 
     "Android/Impl.uno:Source",
     "Android/Impl.cpp.uxl:Extensions",
     "Android/PushNotificationReceiver.java:File",
+    "Android/BigPictureStyleHttp.java:File",
+    "Android/BundleFiles.java:File",
     "Android/Assets/DefaultIcon.png:File"
   ]
 }

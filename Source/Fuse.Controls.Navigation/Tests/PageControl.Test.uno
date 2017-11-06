@@ -10,7 +10,7 @@ namespace Fuse.Controls.Test
 	public class PageControlTest : TestBase
 	{
 		[Test]
-		public void ActiveIndex()
+		public void ActiveIndexBasic()
 		{
 			var p = new UX.PageControl.PageIndex();
 			using (var root = TestRootPanel.CreateWithChild(p, int2(100)))
@@ -32,6 +32,20 @@ namespace Fuse.Controls.Test
 				Assert.AreEqual( "Page2", p.R.Value );
 
 				p.PC.Active = p.D;
+				root.StepFrameJS();
+				Assert.AreEqual( 3, p.PC.ActiveIndex );
+				Assert.AreEqual( p.D, p.PC.Active );
+				Assert.AreEqual( "3", p.Q.Value );
+				Assert.AreEqual( "Page3", p.R.Value );
+
+				p.Seek1.Perform();
+				root.StepFrameJS();
+				Assert.AreEqual( 1, p.PC.ActiveIndex );
+				Assert.AreEqual( p.B, p.PC.Active );
+				Assert.AreEqual( "1", p.Q.Value );
+				Assert.AreEqual( "Page1", p.R.Value );
+				
+				p.RouteGoto4.Pulse();
 				root.StepFrameJS();
 				Assert.AreEqual( 3, p.PC.ActiveIndex );
 				Assert.AreEqual( p.D, p.PC.Active );
@@ -82,7 +96,7 @@ namespace Fuse.Controls.Test
 			}
 		}
 
-		string SafeFormat( Route r )
+		string SafeFormat( RouterPageRoute r )
 		{
 			if (r == null) 
 				return "*null*";
@@ -155,6 +169,7 @@ namespace Fuse.Controls.Test
 				//swipe left (default to go forward)
 				root.PointerSwipe( float2(100,100), float2(800,100), 300 );
 				root.StepFrame(5); //stabilize
+				root.StepFrameJS();
 				Assert.AreEqual( 0, p.index.Value );
 			}
 		}
